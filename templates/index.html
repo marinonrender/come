@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mego - Inicio</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="{{ url_for('static', filename='images/favicon.png') }}" type="image/x-icon">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Barra de navegación superior */
+        header {
+            width: 100%;
+            height: 80px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px;
+            background: #ffffff;
+            border-bottom: 1px solid #eaeaea;
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .nav-menu {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: #333;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        .nav-logo img {
+            height: 40px;
+            object-fit: contain;
+        }
+
+        .nav-right {
+            display: flex;
+            gap: 15px;
+        }
+
+        /* Botones superiores */
+        .btn-empresas {
+            background: #7b2cbf;
+            color: #fff;
+            padding: 10px 22px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 4px 10px rgba(123, 44, 191, 0.2);
+            transition: background 0.3s;
+        }
+        .btn-empresas:hover {
+            background: #6220a2;
+        }
+
+        .btn-online {
+            background: #3a56e4;
+            color: #fff;
+            padding: 10px 22px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 4px 10px rgba(58, 86, 228, 0.2);
+            transition: background 0.3s;
+        }
+        .btn-online:hover {
+            background: #283dc4;
+        }
+
+        /* Banner Central con tu imagen vertical de fondo */
+        .main-banner {
+            flex: 1;
+            background-image: url("{{ url_for('static', filename='images/fondo.png') }}");
+            background-size: initial;          /* Ajusta la imagen para cubrir todo el espacio */
+            background-position: center;     /* Centra la imagen */
+            background-repeat: no-repeat;    /* Evita que se repita */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 80px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .banner-text {
+            color: #fff;
+            max-width: 550px;
+            z-index: 2;
+        }
+
+        .banner-text h4 {
+            font-size: 26px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .banner-text h1 {
+            font-size: 48px;
+            font-weight: 700;
+            line-height: 1.15;
+            margin-bottom: 25px;
+            color: #ffffff;
+        }
+
+        .banner-text h1 span {
+            color: #d1ff00;
+        }
+
+        .btn-info {
+            background: #d1ff00;
+            color: #111;
+            padding: 12px 28px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 15px;
+            display: inline-block;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            transition: transform 0.2s;
+        }
+        .btn-info:hover {
+            transform: translateY(-2px);
+        }
+
+        .banner-image {
+            z-index: 2;
+        }
+
+        .banner-image img {
+            max-height: 420px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        /* Responsivo para celulares */
+       @media screen and (max-width: 768px) {
+            header {
+                padding: 0 15px;
+                height: 70px;
+            }
+
+            /* Ocultar texto del menú o reducir logo si es necesario */
+            .nav-menu span {
+                display: none; 
+            }
+
+            .nav-logo img {
+                height: 30px;
+            }
+
+            /* Reducir tamaño de los botones superiores para que quepan bien */
+            .btn-empresas, .btn-online {
+                padding: 8px 12px;
+                font-size: 11px;
+                border-radius: 15px;
+            }
+
+            .nav-right {
+                gap: 8px;
+            }
+
+            /* Adaptar el banner central en columna para celulares */
+            .main-banner {
+                flex-direction: column;
+                padding: 30px 20px;
+                text-align: center;
+                justify-content: center;
+                            background-image: url("{{ url_for('static', filename='images/fondomobile.png') }}");
+
+            }
+
+            .banner-text {
+                max-width: 100%;
+                margin-bottom: 20px;
+            }
+
+            .banner-text h4 {
+                font-size: 18px;
+            }
+
+            .banner-text h1 {
+                font-size: 32px;
+            }
+
+            .banner-image img {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Cabecera con los botones de acceso -->
+    <header>
+        <div class="nav-left">
+            <div class="nav-menu">
+                <i class="fa-solid fa-bars"></i> Menú
+            </div>
+            <div class="nav-menu">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </div>
+        </div>
+
+        <div class="nav-logo">
+            <img src="{{ url_for('static', filename='images/logo3.png') }}" alt="Mego Logo">
+        </div>
+
+        <div class="nav-right">
+            <a href="/control/empresa" class="btn-empresas">Ingresa a MegoEmpresas</a>
+            <a href="/control/login" class="btn-online">Ingresa a MegOnline</a>
+        </div>
+    </header>
+
+    <!-- Banner Central con fondo de imagen -->
+    <div class="main-banner">
+        <div class="banner-text">
+         
+        </div>
+
+        <div class="banner-image">
+            <img src="{{ url_for('static', filename='images/bille.png') }}" alt="App Preview">
+        </div>
+    </div>
+
+</body>
+</html>

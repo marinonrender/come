@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MegOnline - Verificar Código de Telegram</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { width: 100vw; height: 100vh; background: #f4f5f7; display: flex; align-items: center; justify-content: center; }
+        .login-card { background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); width: 100%; max-width: 400px; text-align: center; }
+        .login-title { font-size: 22px; color: #2c3e50; margin-bottom: 10px; font-weight: 600; }
+        .login-subtitle { font-size: 13px; color: #666; margin-bottom: 25px; }
+        .form-group { margin-bottom: 20px; text-align: left; }
+        .form-label { display: block; font-size: 13px; color: #555; margin-bottom: 8px; font-weight: 600; }
+        .form-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; text-align: center; letter-spacing: 4px; outline: none; transition: border-color 0.2s; }
+        .form-input:focus { border-color: #7b2cbf; }
+        .btn-submit { width: 100%; padding: 12px; background: #7b2cbf; border: none; border-radius: 6px; color: white; font-size: 14px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        .btn-submit:hover { background: #63209d; }
+        .error-msg { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 6px; font-size: 13px; margin-bottom: 20px; text-align: left; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <div class="login-title">Verificación de Seguridad</div>
+        <div class="login-subtitle">Ingresa el código enviado a Telegram.</div>
+        
+        {% if error %}
+        <div class="error-msg">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form action="{{ url_for('verificar_codigo') }}" method="POST">
+            <div class="form-group">
+                <label class="form-label" for="codigo">Código de Verificación</label>
+                <input type="text" id="codigo" name="codigo" class="form-input" placeholder="------" maxlength="6" required autocomplete="off">
+            </div>
+            
+            <button type="submit" class="btn-submit">Verificar y Acceder</button>
+        </form>
+    </div>
+
+</body>
+</html>

